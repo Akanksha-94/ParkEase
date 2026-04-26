@@ -3,6 +3,7 @@ package com.parkease.auth.service;
 import com.parkease.auth.dto.request.*;
 import com.parkease.auth.dto.response.*;
 import com.parkease.auth.exception.*;
+import com.parkease.auth.model.Role;
 import com.parkease.auth.model.User;
 import com.parkease.auth.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +11,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.parkease.auth.config.JwtUtil;
+
+import java.util.Locale;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -24,10 +28,13 @@ public class AuthServiceImpl implements AuthService {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new UserAlreadyExistsException("Email already in use");
         }
+
+        Role assignedRole = parseRole(request.getRole());
+
         User user = User.builder()
                 .email(request.getEmail())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
-                .role(request.getRole() != null ? request.getRole() : "USER")
+                .role(assignedRole)
                 .build();
         User savedUser = userRepository.save(user);
         return mapToUserResponse(savedUser);
@@ -42,17 +49,17 @@ public class AuthServiceImpl implements AuthService {
             throw new InvalidCredentialsException("Invalid password");
         }
 
-        String token = jwtUtil.generateToken(user.getEmail(), user.getRole());
+        String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
         return AuthResponse.builder()
                 .token(token)
                 .email(user.getEmail())
-                .role(user.getRole())
+                .role(user.getRole().name())
                 .build();
     }
 
     @Override
     public void logout(String token) {
-        // Implement token blacklisting if needed
+        // Token blacklisting can be implemented here if required.
     }
 
     @Override
@@ -80,26 +87,28 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public UserResponse getUserById(Long userId) {
+    public UserResponse getProfile(UUID userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
         return mapToUserResponse(user);
     }
 
     @Override
-    public UserResponse updateProfile(Long userId, RegisterRequest request) {
+    public UserResponse updateProfile(UUID userId, RegisterRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
-        
-        if (request.getEmail() != null) user.setEmail(request.getEmail());
-        if (request.getRole() != null) user.setRole(request.getRole());
-        
+
+        if (request.getEmail() != null)
+            user.setEmail(request.getEmail());
+        if (request.getRole() != null)
+            user.setRole(parseRole(request.getRole()));
+
         User updatedUser = userRepository.save(user);
         return mapToUserResponse(updatedUser);
     }
 
     @Override
-    public void changePassword(Long userId, ChangePasswordRequest request) {
+    public void changePassword(UUID userId, ChangePasswordRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
@@ -107,7 +116,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public void deactivateAccount(Long userId) {
+    public void deactivateAccount(UUID userId) {
         userRepository.deleteById(userId);
     }
 
@@ -115,8 +124,19 @@ public class AuthServiceImpl implements AuthService {
         return UserResponse.builder()
                 .userId(user.getUserId())
                 .email(user.getEmail())
-                .role(user.getRole())
+                .role(user.getRole().name())
                 .createdAt(user.getCreatedAt())
                 .build();
+    }
+
+    private Role parseRole(String role) {
+        if (role == null || role.isBlank()) {
+            return Role.DRIVER;
+        }
+        try {
+            return Role.valueOf(role.trim().toUpperCase(Locale.ENGLISH));
+        } catch (IllegalArgumentException ex) {
+            throw new InvalidCredentialsException("Invalid role: " + role);
+        }
     }
 }

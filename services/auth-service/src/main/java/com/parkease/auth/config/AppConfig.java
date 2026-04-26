@@ -8,7 +8,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 /**
  * AppConfig — General application beans.
  * Kept separate from SecurityConfig to avoid circular dependency:
- *   SecurityConfig → JwtAuthFilter → AuthServiceImpl → PasswordEncoder
+ * SecurityConfig → JwtAuthenticationFilter → AuthServiceImpl → PasswordEncoder
  */
 @Configuration
 public class AppConfig {

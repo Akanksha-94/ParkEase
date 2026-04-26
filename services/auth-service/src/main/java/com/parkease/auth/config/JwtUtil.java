@@ -1,6 +1,7 @@
 package com.parkease.auth.config;
 
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
@@ -38,28 +39,28 @@ public class JwtUtil {
     }
 
     private Claims extractAllClaims(String token) {
-        return Jwts.parser()
-                .verifyWith(getSigningKey())
+        return Jwts.parserBuilder()
+                .setSigningKey(getSigningKey())
                 .build()
-                .parseSignedClaims(token)
-                .getPayload();
+                .parseClaimsJws(token)
+                .getBody();
     }
 
     public boolean isTokenStructurallyValid(String token) {
         try {
-            Jwts.parser().verifyWith(getSigningKey()).build().parseSignedClaims(token);
+            extractAllClaims(token);
             return true;
-        } catch (Exception e) {
+        } catch (JwtException | IllegalArgumentException ex) {
             return false;
         }
     }
 
     public String generateToken(String email, String role) {
         return Jwts.builder()
-                .subject(email)
+                .setSubject(email)
                 .claim("role", role)
-                .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + tokenExpiry))
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + tokenExpiry))
                 .signWith(getSigningKey())
                 .compact();
     }

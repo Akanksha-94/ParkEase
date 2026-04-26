@@ -23,7 +23,7 @@ import java.util.List;
 
 @Component
 @RequiredArgsConstructor
-public class JwtAuthFilter extends OncePerRequestFilter {
+public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final AuthService authService;
     private final JwtUtil jwtUtil;
@@ -31,8 +31,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
-            HttpServletResponse response,
-            FilterChain filterChain) throws ServletException, IOException {
+                                    HttpServletResponse response,
+                                    FilterChain filterChain) throws ServletException, IOException {
         String authHeader = request.getHeader("Authorization");
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
@@ -43,13 +43,15 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         String token = authHeader.substring(7);
 
         try {
-            if (!jwtUtil.isTokenStructurallyValid(token) || !authService.validateToken(token)) {
+            if (!jwtUtil.isTokenStructurallyValid(token)) {
                 writeError(response, "Token is invalid or has expired.");
                 return;
             }
 
             String email = jwtUtil.extractEmail(token);
             String role = jwtUtil.extractRole(token);
+
+            authService.getUserByEmail(email);
 
             UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                     email, null, List.of(new SimpleGrantedAuthority("ROLE_" + role)));

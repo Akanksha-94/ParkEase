@@ -8,8 +8,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
+import java.util.UUID;
+
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
 public class AuthController {
 
@@ -25,30 +28,30 @@ public class AuthController {
         return ResponseEntity.ok(authService.login(request));
     }
 
-    @PostMapping("/logout")
-    public ResponseEntity<Void> logout(@RequestParam String token) {
-        authService.logout(token);
+    @GetMapping("/profile")
+    public ResponseEntity<UserResponse> getProfile(Principal principal) {
+        return ResponseEntity.ok(authService.getUserByEmail(principal.getName()));
+    }
+
+    @PutMapping("/profile")
+    public ResponseEntity<UserResponse> updateProfile(Principal principal,
+            @RequestBody RegisterRequest request) {
+        UserResponse existing = authService.getUserByEmail(principal.getName());
+        return ResponseEntity.ok(authService.updateProfile(existing.getUserId(), request));
+    }
+
+    @PutMapping("/password")
+    public ResponseEntity<Void> changePassword(Principal principal,
+            @Valid @RequestBody ChangePasswordRequest request) {
+        UserResponse existing = authService.getUserByEmail(principal.getName());
+        authService.changePassword(existing.getUserId(), request);
         return ResponseEntity.noContent().build();
     }
 
-    @PostMapping("/refresh")
-    public ResponseEntity<AuthResponse> refresh(@RequestParam String token) {
-        return ResponseEntity.ok(authService.refreshToken(token));
-    }
-
-    @GetMapping("/profile/{id}")
-    public ResponseEntity<UserResponse> getProfile(@PathVariable Long id) {
-        return ResponseEntity.ok(authService.getUserById(id));
-    }
-
-    @PutMapping("/profile/{id}")
-    public ResponseEntity<UserResponse> updateProfile(@PathVariable Long id, @RequestBody RegisterRequest request) {
-        return ResponseEntity.ok(authService.updateProfile(id, request));
-    }
-
-    @PutMapping("/profile/{id}/password")
-    public ResponseEntity<Void> changePassword(@PathVariable Long id, @Valid @RequestBody ChangePasswordRequest request) {
-        authService.changePassword(id, request);
+    @PutMapping("/deactivate")
+    public ResponseEntity<Void> deactivateAccount(Principal principal) {
+        UserResponse existing = authService.getUserByEmail(principal.getName());
+        authService.deactivateAccount(existing.getUserId());
         return ResponseEntity.noContent().build();
     }
 }
