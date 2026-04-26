@@ -12,10 +12,14 @@ import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.function.Function;
 
+/**
+ * Utility component for creating and parsing JWT tokens.
+ * Uses JJWT 0.12.x API.
+ */
 @Component
 public class JwtUtil {
 
-    @Value("${jwt.secret:defaultSecretKeyWithAtLeast32CharactersLong}")
+    @Value("${jwt.secret:defaultSecretKeyWithAtLeast32CharactersLong!}")
     private String jwtSecret;
 
     @Value("${jwt.expiry:86400000}")
@@ -39,11 +43,12 @@ public class JwtUtil {
     }
 
     private Claims extractAllClaims(String token) {
-        return Jwts.parserBuilder()
-                .setSigningKey(getSigningKey())
+        // JJWT 0.12.x uses Jwts.parser() instead of Jwts.parserBuilder()
+        return Jwts.parser()
+                .verifyWith(getSigningKey())
                 .build()
-                .parseClaimsJws(token)
-                .getBody();
+                .parseSignedClaims(token)
+                .getPayload();
     }
 
     public boolean isTokenStructurallyValid(String token) {
@@ -56,11 +61,12 @@ public class JwtUtil {
     }
 
     public String generateToken(String email, String role) {
+        // JJWT 0.12.x uses Jwts.builder() with updated API
         return Jwts.builder()
-                .setSubject(email)
+                .subject(email)
                 .claim("role", role)
-                .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + tokenExpiry))
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + tokenExpiry))
                 .signWith(getSigningKey())
                 .compact();
     }

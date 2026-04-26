@@ -65,6 +65,7 @@ public class User {
     @Column(name = "vehicle_plate")
     private String vehiclePlate;
 
+    @Builder.Default
     @Column(name = "is_active", nullable = false)
     private boolean isActive = true;
 
