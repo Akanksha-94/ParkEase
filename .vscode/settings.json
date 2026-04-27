@@ -1,0 +1,7 @@
+{
+  "java.project.sourcePaths": [
+    "services/parking-lot-service/src/main/java",
+    "services/parking-spot-service/src/main/java"
+  ],
+  "java.configuration.updateBuildConfiguration": "automatic"
+}
