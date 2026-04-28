@@ -1,4 +1,4 @@
-package com.parkease.notification.exception;
+package com.parkease.report.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,13 +14,13 @@ import java.util.stream.Collectors;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(NotificationNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleNotificationNotFoundException(NotificationNotFoundException ex) {
+    @ExceptionHandler(ReportNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleReportNotFoundException(ReportNotFoundException ex) {
         return new ResponseEntity<>(ErrorResponse.of(ex.getStatus().value(), ex.getMessage()), ex.getStatus());
     }
 
-    @ExceptionHandler(NotificationException.class)
-    public ResponseEntity<ErrorResponse> handleNotificationException(NotificationException ex) {
+    @ExceptionHandler(ReportException.class)
+    public ResponseEntity<ErrorResponse> handleReportException(ReportException ex) {
         return new ResponseEntity<>(ErrorResponse.of(ex.getStatus().value(), ex.getMessage()), ex.getStatus());
     }
 

@@ -1,16 +1,16 @@
-package com.parkease.notification.exception;
+package com.parkease.report.exception;
 
 import org.springframework.http.HttpStatus;
 
-public class NotificationException extends RuntimeException {
+public class ReportException extends RuntimeException {
 
     private final HttpStatus status;
 
-    public NotificationException(String message) {
+    public ReportException(String message) {
         this(message, HttpStatus.BAD_REQUEST);
     }
 
-    public NotificationException(String message, HttpStatus status) {
+    public ReportException(String message, HttpStatus status) {
         super(message);
         this.status = status;
     }

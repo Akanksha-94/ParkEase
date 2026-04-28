@@ -1,4 +1,4 @@
-package com.parkease.notification.exception;
+package com.parkease.report.exception;
 
 import java.time.LocalDateTime;
 
