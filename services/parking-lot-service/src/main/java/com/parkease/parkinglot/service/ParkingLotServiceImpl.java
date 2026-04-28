@@ -177,24 +177,29 @@ public class ParkingLotServiceImpl implements ParkingLotService {
     @Override
     @Transactional
     public void decrementAvailable(UUID lotId) {
-        ParkingLot lot = findOrThrow(lotId);
-        if (lot.getAvailableSpots() <= 0) {
-            throw new NoAvailableSpotsException("No available spots in lot " + lotId);
+        log.info("Attempting to decrement available spots for lot {}", lotId);
+        int updated = parkingLotRepository.decrementAvailableSpots(lotId);
+        if (updated == 0) {
+            // Either lot doesn't exist or it has 0 available spots.
+            // We check which one to throw the correct exception.
+            ParkingLot lot = findOrThrow(lotId);
+            if (lot.getAvailableSpots() <= 0) {
+                throw new NoAvailableSpotsException("No available spots in lot " + lotId);
+            }
         }
-        lot.setAvailableSpots(lot.getAvailableSpots() - 1);
-        parkingLotRepository.save(lot);
-        log.debug("Decremented available spots for lot {}: now {}", lotId, lot.getAvailableSpots());
+        log.debug("Decremented available spots for lot {}", lotId);
     }
 
     @Override
     @Transactional
     public void incrementAvailable(UUID lotId) {
-        ParkingLot lot = findOrThrow(lotId);
-        if (lot.getAvailableSpots() < lot.getTotalSpots()) {
-            lot.setAvailableSpots(lot.getAvailableSpots() + 1);
-            parkingLotRepository.save(lot);
-            log.debug("Incremented available spots for lot {}: now {}", lotId, lot.getAvailableSpots());
+        log.info("Attempting to increment available spots for lot {}", lotId);
+        int updated = parkingLotRepository.incrementAvailableSpots(lotId);
+        if (updated == 0) {
+            // Either lot doesn't exist or it's already full.
+            findOrThrow(lotId); // throws if lotId is invalid
         }
+        log.debug("Incremented available spots for lot {}", lotId);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

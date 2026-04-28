@@ -81,4 +81,18 @@ public interface ParkingLotRepository extends JpaRepository<ParkingLot, UUID> {
      * Delete all lots managed by a given manager (e.g., when manager account is removed).
      */
     void deleteByManagerId(UUID managerId);
+
+    /**
+     * Atomically decrement available spots for a lot.
+     */
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("UPDATE ParkingLot p SET p.availableSpots = p.availableSpots - 1 WHERE p.lotId = :lotId AND p.availableSpots > 0")
+    int decrementAvailableSpots(@Param("lotId") UUID lotId);
+
+    /**
+     * Atomically increment available spots for a lot.
+     */
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("UPDATE ParkingLot p SET p.availableSpots = p.availableSpots + 1 WHERE p.lotId = :lotId AND p.availableSpots < p.totalSpots")
+    int incrementAvailableSpots(@Param("lotId") UUID lotId);
 }

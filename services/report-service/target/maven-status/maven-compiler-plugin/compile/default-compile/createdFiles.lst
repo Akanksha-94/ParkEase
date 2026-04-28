@@ -1,0 +1,15 @@
+com\parkease\report\exception\ReportException.class
+com\parkease\report\dto\response\PlatformSummary$PlatformSummaryBuilder.class
+com\parkease\report\ReportServiceApplication.class
+com\parkease\report\service\AnalyticsService.class
+com\parkease\report\model\OccupancyLog.class
+com\parkease\report\dto\response\PlatformSummary.class
+com\parkease\report\exception\ReportNotFoundException.class
+com\parkease\report\dto\response\Report$ReportBuilder.class
+com\parkease\report\service\AnalyticsServiceImpl.class
+com\parkease\report\dto\response\Report.class
+com\parkease\report\resource\AnalyticsResource.class
+com\parkease\report\exception\ErrorResponse.class
+com\parkease\report\exception\GlobalExceptionHandler.class
+com\parkease\report\model\OccupancyLog$OccupancyLogBuilder.class
+com\parkease\report\repository\AnalyticsRepository.class

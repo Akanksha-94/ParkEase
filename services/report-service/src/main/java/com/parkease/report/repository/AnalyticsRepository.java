@@ -28,6 +28,6 @@ public interface AnalyticsRepository extends JpaRepository<OccupancyLog, UUID> {
 
     List<OccupancyLog> findByVehicleType(String vehicleType);
 
-    @Query("SELECT COUNT(o) FROM OccupancyLog o WHERE o.lotId = :lotId AND DATE(o.timestamp) = CURRENT_DATE")
+    @Query("SELECT COUNT(o) FROM OccupancyLog o WHERE o.lotId = :lotId AND o.timestamp >= CURRENT_DATE")
     int countByLotIdToday(@Param("lotId") UUID lotId);
 }
