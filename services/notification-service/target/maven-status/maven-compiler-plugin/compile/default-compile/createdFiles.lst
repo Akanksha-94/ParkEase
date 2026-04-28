@@ -7,6 +7,7 @@ com\parkease\notification\model\Notification$NotificationBuilder.class
 com\parkease\notification\service\NotificationService.class
 com\parkease\notification\service\NotificationServiceImpl$1.class
 com\parkease\notification\exception\GlobalExceptionHandler.class
+com\parkease\notification\config\SecurityConfig.class
 com\parkease\notification\exception\ErrorResponse.class
 com\parkease\notification\exception\NotificationException.class
 com\parkease\notification\resource\NotificationResource.class

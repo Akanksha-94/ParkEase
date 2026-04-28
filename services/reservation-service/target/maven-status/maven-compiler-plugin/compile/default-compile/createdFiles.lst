@@ -13,6 +13,7 @@ com\parkease\reservation\model\BookingType.class
 com\parkease\reservation\dto\response\BookingResponse$BookingResponseBuilder.class
 com\parkease\reservation\ReservationServiceApplication.class
 com\parkease\reservation\service\BookingService.class
+com\parkease\reservation\config\SecurityConfig.class
 com\parkease\reservation\exception\GlobalExceptionHandler.class
 com\parkease\reservation\model\VehicleType.class
 com\parkease\reservation\exception\BookingNotFoundException.class

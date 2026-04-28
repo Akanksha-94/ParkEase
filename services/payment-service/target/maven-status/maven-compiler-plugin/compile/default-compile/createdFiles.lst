@@ -13,6 +13,7 @@ com\parkease\payment\service\PaymentServiceImpl.class
 com\parkease\payment\dto\request\RefundPaymentRequest$RefundPaymentRequestBuilder.class
 com\parkease\payment\service\PaymentService.class
 com\parkease\payment\model\PaymentMode.class
+com\parkease\payment\config\SecurityConfig.class
 com\parkease\payment\dto\response\PaymentResponse$PaymentResponseBuilder.class
 com\parkease\payment\model\Payment.class
 com\parkease\payment\dto\response\PaymentResponse.class

@@ -1,6 +1,7 @@
 C:\Users\akank\OneDrive\Desktop\ParkEase\services\vehicle-service\src\main\java\com\parkease\vehicle\service\VehicleService.java
 C:\Users\akank\OneDrive\Desktop\ParkEase\services\vehicle-service\src\main\java\com\parkease\vehicle\exception\VehicleNotFoundException.java
 C:\Users\akank\OneDrive\Desktop\ParkEase\services\vehicle-service\src\main\java\com\parkease\vehicle\exception\GlobalExceptionHandler.java
+C:\Users\akank\OneDrive\Desktop\ParkEase\services\vehicle-service\src\main\java\com\parkease\vehicle\config\SecurityConfig.java
 C:\Users\akank\OneDrive\Desktop\ParkEase\services\vehicle-service\src\main\java\com\parkease\vehicle\model\Vehicle.java
 C:\Users\akank\OneDrive\Desktop\ParkEase\services\vehicle-service\src\main\java\com\parkease\vehicle\resource\VehicleResource.java
 C:\Users\akank\OneDrive\Desktop\ParkEase\services\vehicle-service\src\main\java\com\parkease\vehicle\exception\ErrorResponse.java

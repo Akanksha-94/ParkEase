@@ -4,6 +4,7 @@ C:\Users\akank\OneDrive\Desktop\ParkEase\services\parking-spot-service\src\main\
 C:\Users\akank\OneDrive\Desktop\ParkEase\services\parking-spot-service\src\main\java\com\parkease\parkingspot\model\ParkingSpotStatus.java
 C:\Users\akank\OneDrive\Desktop\ParkEase\services\parking-spot-service\src\main\java\com\parkease\parkingspot\dto\request\UpdateSpotRequest.java
 C:\Users\akank\OneDrive\Desktop\ParkEase\services\parking-spot-service\src\main\java\com\parkease\parkingspot\model\ParkingSpot.java
+C:\Users\akank\OneDrive\Desktop\ParkEase\services\parking-spot-service\src\main\java\com\parkease\parkingspot\config\SecurityConfig.java
 C:\Users\akank\OneDrive\Desktop\ParkEase\services\parking-spot-service\src\main\java\com\parkease\parkingspot\exception\ErrorResponse.java
 C:\Users\akank\OneDrive\Desktop\ParkEase\services\parking-spot-service\src\main\java\com\parkease\parkingspot\resource\ParkingSpotResource.java
 C:\Users\akank\OneDrive\Desktop\ParkEase\services\parking-spot-service\src\main\java\com\parkease\parkingspot\dto\response\ParkingSpotResponse.java

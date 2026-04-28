@@ -1,3 +1,4 @@
+com\parkease\report\config\SecurityConfig.class
 com\parkease\report\exception\ReportException.class
 com\parkease\report\dto\response\PlatformSummary$PlatformSummaryBuilder.class
 com\parkease\report\ReportServiceApplication.class

@@ -1,5 +1,6 @@
 com\parkease\vehicle\model\Vehicle$VehicleBuilder.class
 com\parkease\vehicle\model\Vehicle.class
+com\parkease\vehicle\config\SecurityConfig.class
 com\parkease\vehicle\dto\response\VehicleResponse.class
 com\parkease\vehicle\model\VehicleType.class
 com\parkease\vehicle\exception\GlobalExceptionHandler.class
