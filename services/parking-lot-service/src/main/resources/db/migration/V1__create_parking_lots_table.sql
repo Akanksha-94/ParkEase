@@ -1,0 +1,20 @@
+CREATE TABLE IF NOT EXISTS parking_lots (
+    lot_id          BIGINT          NOT NULL AUTO_INCREMENT,
+    name            VARCHAR(200)    NOT NULL,
+    address         VARCHAR(500)    NOT NULL,
+    city            VARCHAR(100)    NOT NULL,
+    latitude        DECIMAL(10,7)   NOT NULL,
+    longitude       DECIMAL(10,7)   NOT NULL,
+    total_spots     INT             NOT NULL,
+    available_spots INT             NOT NULL DEFAULT 0,
+    hourly_rate     DECIMAL(8,2)    NOT NULL,
+    open_time       TIME,
+    close_time      TIME,
+    manager_id      BIGINT          NOT NULL,
+    is_open         TINYINT(1)      NOT NULL DEFAULT 0,
+    is_approved     TINYINT(1)      NOT NULL DEFAULT 0,
+    image_url       VARCHAR(1000),
+    created_at      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (lot_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

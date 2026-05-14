@@ -1,0 +1,20 @@
+CREATE TABLE IF NOT EXISTS payments (
+    payment_id      BIGINT          NOT NULL AUTO_INCREMENT,
+    booking_id      BIGINT          NOT NULL,
+    user_id         BIGINT          NOT NULL,
+    lot_id          BIGINT          NOT NULL,
+    amount          DECIMAL(8,2)    NOT NULL,
+    status          VARCHAR(30)     NOT NULL DEFAULT 'PENDING',
+    mode            VARCHAR(30)     NOT NULL,
+    transaction_id  VARCHAR(100),
+    currency        VARCHAR(10)     NOT NULL DEFAULT 'INR',
+    paid_at         DATETIME,
+    refunded_at     DATETIME,
+    description     VARCHAR(500),
+    created_at      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (payment_id),
+    INDEX idx_booking_id (booking_id),
+    INDEX idx_user_id (user_id),
+    INDEX idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
