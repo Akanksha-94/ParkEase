@@ -30,4 +30,7 @@ public interface AnalyticsRepository extends JpaRepository<OccupancyLog, Long> {
 
     @Query("SELECT COUNT(o) FROM OccupancyLog o WHERE o.lotId = :lotId AND o.timestamp >= CURRENT_DATE")
     int countByLotIdToday(@Param("lotId") Long lotId);
+
+    @Query("SELECT COUNT(DISTINCT o.lotId) FROM OccupancyLog o")
+    long countDistinctLotId();
 }

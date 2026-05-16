@@ -33,4 +33,8 @@ public interface BookingService {
     BigDecimal calculateAmount(Long bookingId);
 
     List<BookingResponse> getBookingHistory(Long userId);
+
+    BookingResponse updateBooking(Long bookingId, CreateBookingRequest request);
+
+    void deleteBooking(Long bookingId);
 }

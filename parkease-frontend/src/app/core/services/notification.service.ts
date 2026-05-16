@@ -6,7 +6,9 @@ import { AuthService } from './auth.service';
 export interface Notification {
   notificationId: number; recipientId: number; title: string; message: string;
   type: 'BOOKING' | 'CHECKIN' | 'CHECKOUT' | 'EXPIRY' | 'PAYMENT' | 'PROMO' | 'SYSTEM' | 'BOOKING_CONFIRMED' | 'BOOKING_CANCELLED' | 'PAYMENT_SUCCESS' | 'PAYMENT_FAILED' | 'REMINDER';
-  read: boolean; createdAt: string;
+  read: boolean;
+  createdAt?: string;
+  sentAt?: string;
 }
 
 @Injectable({ providedIn: 'root' })

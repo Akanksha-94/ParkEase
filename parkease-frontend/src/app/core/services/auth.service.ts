@@ -12,6 +12,7 @@ export interface AuthUser {
   lastName?: string;
   fullName?: string;
   phoneNumber?: string;
+  profilePicture?: string;
   role: string;
   token: string;
 }

@@ -36,6 +36,11 @@ export class PaymentService {
     return this.api.get<Payment[]>(`payments/user/${this.userId}`);
   }
 
+  // GET /payments
+  getAll(): Observable<Payment[]> {
+    return this.api.get<Payment[]>('payments');
+  }
+
   // GET /payments/{id}
   getById(id: number): Observable<Payment> {
     return this.api.get<Payment>(`payments/${id}`);

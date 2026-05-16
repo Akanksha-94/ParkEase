@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
+import { roleGuard } from './core/guards/role.guard';
 import { ShellComponent } from './layout/shell/shell.component';
 
 export const routes: Routes = [
@@ -31,10 +32,14 @@ export const routes: Routes = [
       },
       {
         path: 'parking-lots',
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN', 'MANAGER'] },
         loadComponent: () => import('./features/parking-lots/parking-lots.component').then(m => m.ParkingLotsComponent)
       },
       {
         path: 'parking-spots',
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN', 'MANAGER'] },
         loadComponent: () => import('./features/parking-spots/parking-spots.component').then(m => m.ParkingSpotsComponent)
       },
       {
@@ -42,7 +47,13 @@ export const routes: Routes = [
         loadComponent: () => import('./features/reservations/reservations.component').then(m => m.ReservationsComponent)
       },
       {
+        path: 'reservations/:id',
+        loadComponent: () => import('./features/reservations/reservation-details/reservation-details.component').then(m => m.ReservationDetailsComponent)
+      },
+      {
         path: 'analytics',
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN', 'MANAGER'] },
         loadComponent: () => import('./features/analytics/analytics.component').then(m => m.AnalyticsComponent)
       },
       {

@@ -240,6 +240,46 @@ public class BookingServiceImpl implements BookingService {
                 .collect(Collectors.toList());
     }
 
+    @Override
+    @Transactional
+    public BookingResponse updateBooking(Long bookingId, CreateBookingRequest request) {
+        Booking booking = findOrThrow(bookingId);
+        
+        // If spot changed, release old and reserve new
+        if (!booking.getSpotId().equals(request.getSpotId())) {
+            callSpotService(booking.getSpotId(), "release");
+            callSpotService(request.getSpotId(), "reserve");
+        }
+        
+        // If lot changed, increment old and decrement new
+        if (!booking.getLotId().equals(request.getLotId())) {
+            callLotService(booking.getLotId(), "increment");
+            callLotService(request.getLotId(), "decrement");
+        }
+
+        booking.setLotId(request.getLotId());
+        booking.setSpotId(request.getSpotId());
+        booking.setVehiclePlate(request.getVehiclePlate());
+        booking.setVehicleType(request.getVehicleType());
+        booking.setBookingType(request.getBookingType());
+        booking.setStartTime(request.getStartTime());
+        booking.setEndTime(request.getEndTime());
+        
+        return toResponse(bookingRepository.save(booking));
+    }
+
+    @Override
+    @Transactional
+    public void deleteBooking(Long bookingId) {
+        Booking booking = findOrThrow(bookingId);
+        // Clean up external resources if it was active/reserved
+        if (booking.getStatus() == BookingStatus.RESERVED || booking.getStatus() == BookingStatus.ACTIVE) {
+            callSpotService(booking.getSpotId(), "release");
+            callLotService(booking.getLotId(), "increment");
+        }
+        bookingRepository.delete(booking);
+    }
+
     // ── Inter-service calls ───────────────────────────────────────────────────
 
     private void callSpotService(Long spotId, String action) {

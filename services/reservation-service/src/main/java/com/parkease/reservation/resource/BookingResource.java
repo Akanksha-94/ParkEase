@@ -113,4 +113,20 @@ public class BookingResource {
         return ResponseEntity.ok(
                 ApiResponse.success("Amount calculated", bookingService.calculateAmount(bookingId)));
     }
+
+    @PutMapping("/{bookingId}")
+    public ResponseEntity<ApiResponse<BookingResponse>> updateBooking(
+            @PathVariable Long bookingId,
+            @Valid @RequestBody CreateBookingRequest request) {
+        log.info("PUT /bookings/{} - Updating booking", bookingId);
+        return ResponseEntity.ok(
+                ApiResponse.success("Booking updated successfully", bookingService.updateBooking(bookingId, request)));
+    }
+
+    @DeleteMapping("/{bookingId}")
+    public ResponseEntity<ApiResponse<Void>> deleteBooking(@PathVariable Long bookingId) {
+        log.info("DELETE /bookings/{} - Deleting booking", bookingId);
+        bookingService.deleteBooking(bookingId);
+        return ResponseEntity.ok(ApiResponse.success("Booking deleted successfully", null));
+    }
 }

@@ -4,6 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../core/services/auth.service';
 import { ReservationService } from '../../core/services/reservation.service';
 import { VehicleService } from '../../core/services/vehicle.service';
+import { AnalyticsService } from '../../core/services/analytics.service';
+import { ParkingLotService } from '../../core/services/parking-lot.service';
 import { ToastService } from '../../core/services/toast.service';
 import { forkJoin } from 'rxjs';
 
@@ -14,199 +16,211 @@ import { forkJoin } from 'rxjs';
   template: `
     <div class="page-header animate-in">
       <div>
-        <h2>Account Control</h2>
-        <p>Manage your identity and operational parameters within the system.</p>
-      </div>
-      <div class="membership-badge">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
-        </svg>
-        Elite Tier Member
+        <h2 class="header-title">Account Control</h2>
+        <p class="header-subtitle">Manage your identity and operational parameters within the system.</p>
       </div>
     </div>
 
-    <div class="profile-layout animate-in">
-      <div class="main-column">
-        <!-- Identity Card -->
-        <section class="profile-card glass">
-          <div class="card-hero">
-            <div class="avatar-container">
-              <div class="avatar-ring">
-                <div class="avatar">{{ initials }}</div>
+    <div class="profile-bento animate-in">
+      <!-- Top Left: Main Identity -->
+      <section class="bento-card large glass identity-section">
+        <div class="identity-header">
+          <div class="avatar-wrap">
+            <div class="avatar-orb" (click)="fileInput.click()">
+              <div class="avatar-fallback" *ngIf="!user?.profilePicture">{{ initials }}</div>
+              <img class="avatar-img" *ngIf="user?.profilePicture" [src]="user?.profilePicture" alt="Profile">
+              <div class="avatar-edit-hint">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
               </div>
             </div>
-            <div class="hero-info">
-              <h3>{{ user?.fullName || (user?.firstName + ' ' + user?.lastName) }}</h3>
-              <p>{{ user?.email }}</p>
-              <div class="roles">
-                <span class="badge badge-info">{{ user?.role }}</span>
-                <span class="badge badge-success">Verified</span>
-              </div>
+            <div class="avatar-controls">
+              <button class="control-btn" (click)="fileInput.click()">Update Photo</button>
+              <button class="control-btn danger" *ngIf="user?.profilePicture" (click)="deleteProfilePicture()">Remove</button>
             </div>
+            <input type="file" #fileInput hidden accept="image/*" (change)="onFileSelected($event)">
           </div>
-
-          <!-- Edit Profile Form -->
-          <div class="section-divider">
-            <h4 class="section-title">Update Profile</h4>
-          </div>
-
-          <form (submit)="saveProfile()" #profileForm="ngForm">
-            <div class="grid grid-cols-2 gap-6 mb-6">
-              <div class="form-group">
-                <label>Full Name</label>
-                <input type="text" class="form-control" name="fullName"
-                  [(ngModel)]="editProfile.fullName" placeholder="Your full name">
-              </div>
-              <div class="form-group">
-                <label>Email</label>
-                <input type="email" class="form-control" name="email"
-                  [(ngModel)]="editProfile.email" placeholder="your@email.com">
+          
+          <div class="identity-info">
+            <div class="name-row">
+              <h3 class="user-name">{{ user?.fullName || (user?.firstName + ' ' + user?.lastName) }}</h3>
+              <div class="verified-tag">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                VERIFIED
               </div>
             </div>
-            <div class="form-group mb-6">
-              <label>Phone Number</label>
-              <input type="tel" class="form-control" name="phone"
-                [(ngModel)]="editProfile.phone" placeholder="+91 9876543210">
+            <p class="user-email">{{ user?.email }}</p>
+            <div class="role-pills">
+              <span class="role-pill">{{ user?.role }}</span>
+              <span class="role-pill secondary">ParkEase Native</span>
             </div>
-            <button type="submit" class="btn btn-primary" [disabled]="savingProfile()">
-              {{ savingProfile() ? 'Saving...' : 'Save Changes' }}
-            </button>
-          </form>
-        </section>
-
-        <!-- Password Change -->
-        <section class="security-form glass mt-6">
-          <div class="section-divider mb-6">
-            <h4 class="section-title">Change Password</h4>
-          </div>
-
-          <form (submit)="changePassword()" #pwForm="ngForm">
-            <div class="form-group mb-4">
-              <label>Current Password</label>
-              <input type="password" class="form-control" name="currentPw"
-                [(ngModel)]="pwChange.current" required placeholder="••••••••">
-            </div>
-            <div class="grid grid-cols-2 gap-6 mb-6">
-              <div class="form-group">
-                <label>New Password</label>
-                <input type="password" class="form-control" name="newPw"
-                  [(ngModel)]="pwChange.newPw" required minlength="6" placeholder="Min 6 characters">
-              </div>
-              <div class="form-group">
-                <label>Confirm Password</label>
-                <input type="password" class="form-control" name="confirmPw"
-                  [(ngModel)]="pwChange.confirm" required placeholder="Repeat new password"
-                  [class.input-error]="pwChange.newPw && pwChange.confirm && pwChange.newPw !== pwChange.confirm">
-              </div>
-            </div>
-            <div class="text-danger text-sm mb-4 font-bold" *ngIf="pwChange.newPw && pwChange.confirm && pwChange.newPw !== pwChange.confirm">
-              Passwords do not match
-            </div>
-            <button type="submit" class="btn btn-secondary"
-              [disabled]="pwForm.invalid || pwChange.newPw !== pwChange.confirm || changingPw()">
-              {{ changingPw() ? 'Updating...' : 'Update Password' }}
-            </button>
-          </form>
-        </section>
-      </div>
-
-      <div class="side-column">
-        <div class="stats-stack">
-          <div class="mini-stat glass" *ngFor="let s of stats()">
-            <span class="lbl">{{ s.label }}</span>
-            <span class="val font-heading">{{ s.value }}</span>
           </div>
         </div>
 
-        <section class="id-card glass">
-          <div class="section-title mb-4">System Identity</div>
-          <div class="id-fields">
-            <div class="id-field">
-              <span class="lbl">User ID</span>
-              <span class="val">USR-{{ user?.userId || user?.id }}</span>
-            </div>
-            <div class="id-field">
-              <span class="lbl">Role</span>
-              <span class="val">{{ user?.role }}</span>
-            </div>
-            <div class="id-field">
-              <span class="lbl">Phone</span>
-              <span class="val">{{ user?.phoneNumber || editProfile.phone || 'Not set' }}</span>
-            </div>
+        <div class="identity-form">
+          <div class="form-header">
+            <span class="form-label">Update Personal Details</span>
           </div>
-        </section>
+          <form (submit)="saveProfile()" #profileForm="ngForm">
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Legal Name</label>
+                <div class="input-wrap">
+                  <input type="text" name="fullName" [(ngModel)]="editProfile.fullName" placeholder="Full name">
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Email Address</label>
+                <div class="input-wrap">
+                  <input type="email" name="email" [(ngModel)]="editProfile.email" placeholder="Email">
+                </div>
+              </div>
+              <div class="form-group full">
+                <label>Contact Number</label>
+                <div class="input-wrap">
+                  <input type="tel" name="phone" [(ngModel)]="editProfile.phone" placeholder="+91 0000000000">
+                </div>
+              </div>
+            </div>
+            <button type="submit" class="save-btn" [disabled]="savingProfile()">
+              <span>{{ savingProfile() ? 'Processing...' : 'Sync Profile Changes' }}</span>
+            </button>
+          </form>
+        </div>
+      </section>
 
-        <section class="security-card glass">
-          <div class="section-header">
-            <h4>Security Matrix</h4>
-            <span class="dot active"></span>
-          </div>
-          <div class="protocol-list">
-            <div class="protocol-item">
-              <div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg></div>
-              <div class="info">
-                <span class="title">JWT Authentication</span>
-                <span class="status success">Active</span>
-              </div>
+      <!-- Top Right: Quick Stats -->
+      <div class="stats-bento">
+        <div class="stat-card glass" *ngFor="let s of stats()">
+          <span class="stat-label">{{ s.label }}</span>
+          <span class="stat-value">{{ s.value }}</span>
+          <div class="stat-deco"></div>
+        </div>
+        
+        <section class="identity-badge glass">
+          <span class="badge-label">Network Identity</span>
+          <div class="badge-data">
+            <div class="data-item">
+              <span class="l">Registry ID</span>
+              <span class="v">USR-{{ user?.userId || user?.id }}</span>
             </div>
-            <div class="protocol-item">
-              <div class="icon-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0110 0v4"></path></svg></div>
-              <div class="info">
-                <span class="title">BCrypt Encryption</span>
-                <span class="status">Password secured</span>
-              </div>
+            <div class="data-item">
+              <span class="l">Access Level</span>
+              <span class="v" style="color: var(--primary-color)">{{ user?.role }}</span>
             </div>
           </div>
         </section>
       </div>
+
+      <!-- Bottom Left: Security -->
+      <section class="bento-card glass security-section">
+        <div class="form-header">
+          <span class="form-label">Credentials Authorization</span>
+        </div>
+        <form (submit)="changePassword()" #pwForm="ngForm">
+          <div class="form-group mb-6">
+            <label>Current Encryption Key</label>
+            <div class="input-wrap">
+              <input type="password" name="currentPw" [(ngModel)]="pwChange.current" required placeholder="••••••••">
+            </div>
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>New Passphrase</label>
+              <div class="input-wrap">
+                <input type="password" name="newPw" [(ngModel)]="pwChange.newPw" required minlength="6" placeholder="Min 6 chars">
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Repeat Passphrase</label>
+              <div class="input-wrap">
+                <input type="password" name="confirmPw" [(ngModel)]="pwChange.confirm" required placeholder="Repeat passphrase">
+              </div>
+            </div>
+          </div>
+          <button type="submit" class="save-btn secondary" [disabled]="pwForm.invalid || pwChange.newPw !== pwChange.confirm || changingPw()">
+            <span>{{ changingPw() ? 'Updating...' : 'Refresh Credentials' }}</span>
+          </button>
+        </form>
+      </section>
+
     </div>
   `,
   styles: [`
-    .page-header { display: flex; justify-content: space-between; align-items: center; }
-    .membership-badge { display: flex; align-items: center; gap: 8px; padding: 8px 16px; background: hsla(38, 92%, 50%, 0.1); border: 1px solid hsla(38, 92%, 50%, 0.2); border-radius: 12px; color: #f59e0b; font-size: 13px; font-weight: 800; svg { width: 16px; height: 16px; } }
+    .header-title { font-size: 42px; font-weight: 900; letter-spacing: -2px; color: var(--text-primary); margin: 0; }
+    .header-subtitle { color: var(--text-muted); margin-top: 8px; font-size: 15px; }
+    .membership-badge { display: flex; align-items: center; gap: 8px; padding: 10px 20px; background: oklch(38% 0.1 50 / 10%); border: 1px solid oklch(38% 0.1 50 / 20%); border-radius: 100px; color: #f59e0b; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; svg { width: 14px; height: 14px; } }
 
-    .profile-layout { display: grid; grid-template-columns: 1fr 300px; gap: 24px; }
+    .profile-bento { 
+      display: grid; grid-template-columns: 1fr 340px; grid-template-rows: auto auto; gap: 24px; 
+    }
 
-    .profile-card, .security-form {
-      padding: 40px;
-      .card-hero { display: flex; align-items: center; gap: 32px; margin-bottom: 40px; }
-      .avatar-container {
-        .avatar-ring { padding: 4px; border-radius: 28px; background: linear-gradient(135deg, var(--primary), var(--accent)); .avatar { width: 96px; height: 96px; border-radius: 24px; background: var(--bg-surface); display: flex; align-items: center; justify-content: center; font-size: 36px; font-weight: 800; color: #fff; border: 3px solid var(--bg-base); } }
+    .bento-card { border-radius: 32px; padding: 40px; overflow: hidden; position: relative; }
+    
+    /* Identity Section */
+    .identity-header { display: flex; gap: 40px; align-items: flex-start; margin-bottom: 48px; }
+    .avatar-wrap { 
+      display: flex; flex-direction: column; align-items: center; gap: 16px;
+      .avatar-orb { 
+        width: 120px; height: 120px; border-radius: 50%; position: relative; cursor: pointer; 
+        background: linear-gradient(135deg, var(--primary-color), var(--accent-color, #8b5cf6)); padding: 4px;
+        transition: 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+        &:hover { transform: scale(1.05) rotate(5deg); .avatar-edit-hint { opacity: 1; } }
       }
-      .hero-info { h3 { font-size: 2rem; margin-bottom: 6px; } p { font-size: 1rem; color: var(--text-muted); margin-bottom: 12px; } .roles { display: flex; gap: 10px; } }
+      .avatar-fallback, .avatar-img { width: 100%; height: 100%; border-radius: 50%; background: var(--bg-base); border: 4px solid var(--bg-base); display: flex; align-items: center; justify-content: center; font-size: 44px; font-weight: 900; color: var(--text-primary); object-fit: cover; }
+      .avatar-edit-hint { position: absolute; inset: 4px; border-radius: 50%; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; opacity: 0; transition: 0.3s; color: #fff; svg { width: 32px; height: 32px; } }
+      .avatar-controls { display: flex; gap: 8px; .control-btn { font-size: 10px; font-weight: 800; padding: 6px 12px; border-radius: 100px; background: oklch(var(--foreground) / 5%); border: 1px solid oklch(var(--foreground) / 10%); color: var(--text-muted); cursor: pointer; transition: 0.3s; &:hover { background: var(--text-primary); color: var(--bg-base); } &.danger:hover { background: #ef4444; color: #fff; border-color: #ef4444; } } }
     }
 
-    .section-divider { border-top: 1px solid var(--border); padding-top: 28px; margin-bottom: 24px; }
-    .section-title { font-size: 13px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; }
-
-    .input-error { border-color: hsl(var(--danger)) !important; }
-    .text-danger { color: hsl(var(--danger)); }
-
-    .stats-stack { display: flex; flex-direction: column; gap: 16px; margin-bottom: 20px; }
-    .mini-stat { padding: 24px; display: flex; flex-direction: column; gap: 4px; .lbl { font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; } .val { font-size: 2rem; font-weight: 800; color: #fff; } }
-
-    .id-card { padding: 24px; margin-bottom: 20px; .id-fields { display: flex; flex-direction: column; gap: 16px; } .id-field { display: flex; flex-direction: column; .lbl { font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; } .val { font-size: 14px; font-weight: 700; color: #fff; margin-top: 2px; } } }
-
-    .security-card {
-      padding: 24px;
-      .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; h4 { font-size: 13px; font-weight: 800; text-transform: uppercase; } .dot { width: 8px; height: 8px; border-radius: 50%; &.active { background: #10b981; box-shadow: 0 0 10px #10b981; } } }
-      .protocol-list { display: flex; flex-direction: column; gap: 16px; .protocol-item { display: flex; gap: 12px; align-items: center; .icon-box { width: 40px; height: 40px; border-radius: 10px; background: hsla(255, 255%, 255%, 0.03); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; color: var(--primary); svg { width: 18px; height: 18px; } } .info { display: flex; flex-direction: column; .title { font-size: 13px; font-weight: 700; color: #fff; } .status { font-size: 11px; color: var(--text-muted); &.success { color: #10b981; } } } } }
+    .identity-info {
+      flex: 1;
+      .name-row { display: flex; align-items: center; gap: 16px; margin-bottom: 8px; .user-name { font-size: 32px; font-weight: 900; letter-spacing: -1px; margin: 0; } .verified-tag { display: flex; align-items: center; gap: 4px; font-size: 9px; font-weight: 900; color: #10b981; background: oklch(0.6 0.2 150 / 10%); padding: 4px 8px; border-radius: 100px; letter-spacing: 1px; svg { width: 10px; height: 10px; } } }
+      .user-email { font-size: 16px; color: var(--text-muted); margin-bottom: 20px; }
+      .role-pills { display: flex; gap: 8px; .role-pill { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; padding: 6px 12px; border-radius: 100px; background: oklch(var(--primary) / 10%); color: var(--primary-color); border: 1px solid oklch(var(--primary) / 20%); &.secondary { background: oklch(var(--foreground) / 5%); color: var(--text-muted); border-color: oklch(var(--foreground) / 10%); } } }
     }
 
-    @media (max-width: 1024px) { .profile-layout { grid-template-columns: 1fr; } }
+    /* Forms */
+    .form-header { margin-bottom: 24px; padding-bottom: 12px; border-bottom: 1px solid oklch(var(--foreground) / 8%); .form-label { font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 2px; } }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; &.full { grid-template-columns: 1fr; } }
+    .form-group { 
+      display: flex; flex-direction: column; gap: 8px; &.full { grid-column: span 2; }
+      label { font-size: 11px; font-weight: 700; color: var(--text-muted); margin-top: 8px; padding-left: 16px; }
+      .input-wrap { 
+        position: relative; 
+        input { width: 100%; height: 44px; background: oklch(var(--foreground) / 5%); border: 1px solid oklch(var(--foreground) / 10%); border-radius: 99px; padding: 0 24px; color: var(--text-primary); font-size: 14px; font-weight: 600; transition: 0.3s; &:focus { border-color: var(--primary-color); background: oklch(var(--foreground) / 8%); box-shadow: 0 0 20px oklch(var(--primary-glow-raw) / 15%); outline: none; } }
+      }
+    }
+    .save-btn { width: fit-content; padding: 0 32px; height: 44px; border-radius: 14px; border: none; background: var(--text-primary); color: var(--bg-base); font-size: 13px; font-weight: 800; cursor: pointer; transition: 0.4s; &:hover:not(:disabled) { transform: translateY(-3px); box-shadow: 0 10px 30px oklch(var(--foreground) / 15%); } &:disabled { opacity: 0.5; cursor: not-allowed; } &.secondary { background: oklch(var(--foreground) / 8%); color: var(--text-primary); border: 1px solid oklch(var(--foreground) / 10%); &:hover { background: oklch(var(--foreground) / 12%); } } }
+
+    /* Right Column Stats */
+    .stats-bento { display: flex; flex-direction: column; gap: 24px; }
+    .stat-card { 
+      padding: 32px; border-radius: 28px; position: relative; overflow: hidden;
+      display: flex; flex-direction: column; gap: 4px;
+      .stat-label { font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+      .stat-value { font-size: 48px; font-weight: 900; color: var(--text-primary); letter-spacing: -2px; }
+      .stat-deco { position: absolute; right: -20px; bottom: -20px; width: 100px; height: 100px; border-radius: 50%; background: var(--primary-color); filter: blur(60px); opacity: 0.1; }
+    }
+    .identity-badge { 
+      padding: 32px; border-radius: 28px; 
+      .badge-label { font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 20px; }
+      .badge-data { display: flex; flex-direction: column; gap: 16px; }
+      .data-item { display: flex; flex-direction: column; .l { font-size: 10px; font-weight: 700; color: var(--text-muted); } .v { font-size: 15px; font-weight: 800; } }
+    }
+
+    @media (max-width: 1100px) { .profile-bento { grid-template-columns: 1fr; } }
+    @keyframes pulse { 0% { transform: scale(0.95); opacity: 0.5; } 50% { transform: scale(1.1); opacity: 1; } 100% { transform: scale(0.95); opacity: 0.5; } }
   `]
 })
 export class ProfileComponent implements OnInit {
   private auth = inject(AuthService);
   private resService = inject(ReservationService);
   private vehicleService = inject(VehicleService);
+  private analytics = inject(AnalyticsService);
+  private lotService = inject(ParkingLotService);
   private toast = inject(ToastService);
 
   user = this.auth.currentUser;
-  stats = signal([
-    { label: 'Total Reservations', value: '0' },
-    { label: 'Registered Vehicles', value: '0' }
-  ]);
+  stats = signal<any[]>([]);
 
   editProfile = {
     fullName: this.auth.currentUser?.fullName ?? '',
@@ -218,6 +232,9 @@ export class ProfileComponent implements OnInit {
   savingProfile = signal(false);
   changingPw = signal(false);
 
+  get isAdmin(): boolean { return this.auth.role === 'ADMIN'; }
+  get isManager(): boolean { return this.auth.role === 'MANAGER'; }
+
   get initials(): string {
     const u = this.user;
     if (!u) return 'U';
@@ -225,16 +242,62 @@ export class ProfileComponent implements OnInit {
     return (u.fullName ?? u.email ?? 'U').slice(0, 2).toUpperCase();
   }
 
+  onFileSelected(event: any) {
+    const file = event.target.files[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        this.toast.error('Image size must be less than 2MB');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (e: any) => {
+        const base64Image = e.target.result;
+        this.auth.updateUser({ profilePicture: base64Image });
+        this.user = this.auth.currentUser;
+        this.toast.success('Profile picture updated successfully!');
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  deleteProfilePicture() {
+    this.auth.updateUser({ profilePicture: '' });
+    this.user = this.auth.currentUser;
+    this.toast.success('Profile picture removed!');
+  }
+
   ngOnInit() {
-    forkJoin({
-      res: this.resService.getMyReservations(),
-      v: this.vehicleService.getMyVehicles()
-    }).subscribe(({ res, v }) => {
-      this.stats.set([
-        { label: 'Total Reservations', value: res.length.toString() },
-        { label: 'Registered Vehicles', value: v.length.toString() }
-      ]);
-    });
+    if (this.isAdmin) {
+      forkJoin({
+        lots: this.lotService.getAll(),
+        summary: this.analytics.getPlatformSummary()
+      }).subscribe(({ lots, summary }) => {
+        this.stats.set([
+          { label: 'Network Lots', value: lots.length.toString() },
+          { label: 'Active Sessions', value: (summary.totalSpots - summary.availableSpots).toString() }
+        ]);
+      });
+    } else if (this.isManager) {
+      const userId = this.auth.currentUser?.userId || this.auth.currentUser?.id;
+      if (userId) {
+        this.lotService.getAll({ managerId: userId.toString() }).subscribe(lots => {
+          this.stats.set([
+            { label: 'Managed Lots', value: lots.length.toString() },
+            { label: 'Status', value: 'Active' }
+          ]);
+        });
+      }
+    } else {
+      forkJoin({
+        res: this.resService.getMyReservations(),
+        v: this.vehicleService.getMyVehicles()
+      }).subscribe(({ res, v }) => {
+        this.stats.set([
+          { label: 'Total Reservations', value: res.length.toString() },
+          { label: 'Registered Vehicles', value: v.length.toString() }
+        ]);
+      });
+    }
   }
 
   saveProfile() {

@@ -37,6 +37,7 @@ import { ToastService } from '../../core/services/toast.service';
             <tr>
               <th>Reference ID</th>
               <th>Booking</th>
+              <th *ngIf="isAdmin">Driver</th>
               <th>Amount</th>
               <th>Mode</th>
               <th>Status</th>
@@ -48,6 +49,7 @@ import { ToastService } from '../../core/services/toast.service';
             <tr *ngFor="let p of payments()">
               <td><code class="tx-ref">#{{ p.transactionId?.slice(0, 12) || 'TX-' + p.id }}</code></td>
               <td class="text-secondary font-heading">Booking #{{ p.bookingId }}</td>
+              <td *ngIf="isAdmin" class="text-sm font-heading" style="color: var(--primary-color)">USR-{{ p.userId }}</td>
               <td><span class="font-heading text-primary">{{ p.amount | currency }}</span></td>
               <td>
                 <div class="flex items-center gap-2">
@@ -78,7 +80,7 @@ import { ToastService } from '../../core/services/toast.service';
                     Receipt
                   </button>
                   <button class="btn btn-ghost btn-sm btn-danger-text"
-                    *ngIf="p.status === 'COMPLETED'"
+                    *ngIf="p.status === 'COMPLETED' && (isAdmin || p.userId === currentUserId)"
                     (click)="requestRefund(p)">
                     Refund
                   </button>
@@ -206,7 +208,7 @@ import { ToastService } from '../../core/services/toast.service';
     .stat-card {
       padding: 24px; position: relative; overflow: hidden;
       .label { font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; }
-      .value { font-size: 2rem; color: #fff; }
+      .value { font-size: 2rem; color: var(--text-primary); }
       .accent-bar { position: absolute; bottom: 0; left: 0; width: 40px; height: 4px; background: var(--primary); border-radius: 0 4px 4px 0; }
     }
 
@@ -215,7 +217,7 @@ import { ToastService } from '../../core/services/toast.service';
 
     .modal-box { width: 480px; padding: 40px; }
     .modal-header { display: flex; justify-content: space-between; align-items: center; h3 { font-size: 1.5rem; } }
-    .close-btn { background: transparent; border: none; color: var(--text-muted); font-size: 20px; cursor: pointer; &:hover { color: #fff; } }
+    .close-btn { background: transparent; border: none; color: var(--text-muted); font-size: 20px; cursor: pointer; &:hover { color: var(--text-primary); } }
 
     .pay-summary { border-radius: 12px; }
 
@@ -236,11 +238,11 @@ import { ToastService } from '../../core/services/toast.service';
 
     .receipt-text { background: var(--bg-hover); padding: 20px; border-radius: 12px; text-align: left; pre { font-size: 12px; color: var(--text-secondary); white-space: pre-wrap; word-break: break-all; } }
 
-    .id-block { background: hsla(255, 255%, 255%, 0.03); padding: 16px; border-radius: 12px; margin-bottom: 24px; label { font-size: 10px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; } .val { font-size: 14px; font-weight: 700; color: #fff; margin-top: 4px; } }
+    .id-block { background: hsla(255, 255%, 255%, 0.03); padding: 16px; border-radius: 12px; margin-bottom: 24px; label { font-size: 10px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; } .val { font-size: 14px; font-weight: 700; color: var(--text-primary); margin-top: 4px; } }
 
-    .data-matrix { text-align: left; display: grid; gap: 14px; margin-bottom: 24px; .item { display: flex; justify-content: space-between; align-items: baseline; label { font-size: 11px; font-weight: 700; color: var(--text-muted); } span { font-size: 13px; font-weight: 700; color: #fff; } } }
+    .data-matrix { text-align: left; display: grid; gap: 14px; margin-bottom: 24px; .item { display: flex; justify-content: space-between; align-items: baseline; label { font-size: 11px; font-weight: 700; color: var(--text-muted); } span { font-size: 13px; font-weight: 700; color: var(--text-primary); } } }
 
-    .total-section { padding-top: 20px; border-top: 1px dashed var(--border); margin-bottom: 24px; .label { font-size: 12px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px; } .amount { font-size: 2.5rem; color: #fff; } }
+    .total-section { padding-top: 20px; border-top: 1px dashed var(--border); margin-bottom: 24px; .label { font-size: 12px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px; } .amount { font-size: 2.5rem; color: var(--text-primary); } }
 
     .status-indicator { padding: 12px; border-radius: 10px; font-weight: 800; font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; &.completed { background: hsla(142, 71%, 45%, 0.1); color: #10b981; } &.pending { background: hsla(38, 92%, 50%, 0.1); color: #f59e0b; } &.failed { background: hsla(0, 84%, 60%, 0.1); color: #ef4444; } &.refunded { background: hsla(var(--p-primary), 0.1); color: var(--primary); } }
 
@@ -252,6 +254,9 @@ export class PaymentsComponent implements OnInit {
   private resService = inject(ReservationService);
   private auth = inject(AuthService);
   private toast = inject(ToastService);
+
+  get isAdmin(): boolean { return this.auth.role === 'ADMIN'; }
+  get currentUserId(): number { return this.auth.currentUser?.userId ?? this.auth.currentUser?.id ?? 0; }
 
   payments = signal<Payment[]>([]);
   selectedPayment = signal<Payment | null>(null);
@@ -278,14 +283,16 @@ export class PaymentsComponent implements OnInit {
   }
 
   loadPayments() {
-    this.paymentService.getMyPayments().subscribe({
-      next: ps => {
+    const request = this.isAdmin ? this.paymentService.getAll() : this.paymentService.getMyPayments();
+    
+    request.subscribe({
+      next: (ps: Payment[]) => {
         this.payments.set(ps);
-        const total = ps.filter(p => p.status === 'COMPLETED').reduce((acc, p) => acc + p.amount, 0);
+        const total = ps.filter(p => p.status === 'COMPLETED').reduce((acc: number, p) => acc + p.amount, 0);
         const completed = ps.filter(p => p.status === 'COMPLETED').length;
         const pending = ps.filter(p => p.status === 'PENDING').length;
         this.summary.set([
-          { label: 'Fiscal Velocity', value: '$' + total.toFixed(2) },
+          { label: this.isAdmin ? 'Total Network Revenue' : 'Fiscal Velocity', value: '$' + total.toFixed(2) },
           { label: 'Successful Cycles', value: completed.toString() },
           { label: 'Pending Uplinks', value: pending.toString() }
         ]);
