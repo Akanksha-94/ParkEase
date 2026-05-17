@@ -12,6 +12,8 @@ public interface PaymentService {
 
     PaymentResponse processPayment(ProcessPaymentRequest request);
 
+    com.parkease.payment.dto.response.PaymentOrderResponse createRazorpayOrder(com.parkease.payment.dto.request.PaymentOrderRequest request);
+
     PaymentResponse getByBooking(Long bookingId);
 
     List<PaymentResponse> getByUser(Long userId);

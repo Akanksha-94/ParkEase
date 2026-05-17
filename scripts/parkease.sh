@@ -56,10 +56,40 @@ cleanup_ports() {
         fi
     done
 }
+load_env() {
+    local env_file="$ROOT_DIR/.env"
+    if [ -f "$env_file" ]; then
+        echo "Loading centralized environment variables from .env ..."
+        while IFS= read -r line || [ -n "$line" ]; do
+            # Ignore comments and empty lines
+            [[ "$line" =~ ^[[:space:]]*# ]] && continue
+            [[ "$line" =~ ^[[:space:]]*$ ]] && continue
+            
+            # Extract key and value
+            if [[ "$line" =~ ^[[:space:]]*([^=[:space:]]+)[[:space:]]*=[[:space:]]*(.*)[[:space:]]*$ ]]; then
+                local key="${BASH_REMATCH[1]}"
+                local val="${BASH_REMATCH[2]}"
+                # Strip trailing whitespace and surrounding quotes
+                val=$(echo "$val" | sed -e 's/[[:space:]]*$//')
+                val="${val#\"}"
+                val="${val%\"}"
+                val="${val#\'}"
+                val="${val%\'}"
+                export "$key"="$val"
+            fi
+        done < "$env_file"
+    else
+        echo "⚠️  Warning: Centralized .env file not found at $env_file. Using system env."
+    fi
+}
 
 start_all() {
+    load_env
+    export SPRING_PROFILES_ACTIVE="${SPRING_PROFILES_ACTIVE:-dev}"
+    echo "Starting ParkEase under active profile: $SPRING_PROFILES_ACTIVE"
     cleanup_ports
     > "$PIDS_FILE"
+    
     start_service() {
         local dir="$1"
         local name="$2"
@@ -73,27 +103,40 @@ start_all() {
     }
 
     echo "Starting Discovery Server..."
-    start_service "$ROOT_DIR/discovery-server" "discovery-server"
+    # Discovery Server uses PORT (default 8761)
+    (
+        export PORT="${PORT:-8761}"
+        start_service "$ROOT_DIR/discovery-server" "discovery-server"
+    )
     echo "Waiting 20s for Eureka to boot..."
     sleep 20
 
     echo "Starting API Gateway..."
-    start_service "$ROOT_DIR/api-gateway" "api-gateway"
+    # API Gateway uses GATEWAY_PORT (default 8080)
+    (
+        export GATEWAY_PORT="${GATEWAY_PORT:-8080}"
+        start_service "$ROOT_DIR/api-gateway" "api-gateway"
+    )
     sleep 5
 
     echo "Starting microservices..."
     local services=(
-        "auth-service"
-        "parking-lot-service"
-        "parking-spot-service"
-        "reservation-service"
-        "payment-service"
-        "report-service"
-        "notification-service"
-        "vehicle-service"
+        "auth-service:AUTH_PORT:8081"
+        "parking-lot-service:LOTS_PORT:8082"
+        "parking-spot-service:SPOTS_PORT:8083"
+        "reservation-service:RESERVATIONS_PORT:8084"
+        "payment-service:PAYMENTS_PORT:8085"
+        "report-service:REPORTS_PORT:8086"
+        "notification-service:NOTIFICATIONS_PORT:8087"
+        "vehicle-service:VEHICLES_PORT:8088"
     )
-    for svc in "${services[@]}"; do
-        start_service "$ROOT_DIR/services/$svc" "$svc"
+    for svc_info in "${services[@]}"; do
+        IFS=':' read -r svc var default <<< "$svc_info"
+        local val="${!var}"
+        (
+            export SERVER_PORT="${val:-$default}"
+            start_service "$ROOT_DIR/services/$svc" "$svc"
+        )
     done
 
     echo ""

@@ -1,0 +1,21 @@
+server:
+  port: ${PORT:8761}
+
+spring:
+  config:
+    import: "optional:file:.env[.properties],optional:file:discovery-server/.env[.properties]"
+  application:
+    name: discovery-server
+
+eureka:
+  instance:
+    hostname: ${EUREKA_HOSTNAME:localhost}
+  client:
+    register-with-eureka: false
+    fetch-registry: false
+    serviceUrl:
+      defaultZone: http://${eureka.instance.hostname}:${server.port}/eureka/
+
+logging:
+  level:
+    com.parkease: INFO
