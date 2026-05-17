@@ -12,6 +12,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.razorpay.RazorpayClient;
+import com.razorpay.Order;
+import org.json.JSONObject;
 
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
@@ -27,6 +30,7 @@ import java.util.stream.Collectors;
 public class PaymentServiceImpl implements PaymentService {
 
     private final PaymentRepository paymentRepository;
+    private final RazorpayClient razorpayClient;
 
     @Override
     @Transactional
@@ -48,6 +52,31 @@ public class PaymentServiceImpl implements PaymentService {
                 .build();
 
         return toResponse(paymentRepository.save(payment));
+    }
+
+    @Override
+    public com.parkease.payment.dto.response.PaymentOrderResponse createRazorpayOrder(com.parkease.payment.dto.request.PaymentOrderRequest request) {
+        try {
+            JSONObject orderRequest = new JSONObject();
+            // Razorpay accepts amount in paise (1 INR = 100 paise)
+            orderRequest.put("amount", request.getAmount().multiply(new BigDecimal("100")).intValue());
+            orderRequest.put("currency", request.getCurrency());
+            orderRequest.put("receipt", request.getReceipt() != null ? request.getReceipt() : "txn_" + System.currentTimeMillis());
+            
+            Order order = razorpayClient.orders.create(orderRequest);
+            
+            return com.parkease.payment.dto.response.PaymentOrderResponse.builder()
+                    .orderId(order.get("id"))
+                    .currency(order.get("currency"))
+                    .amount(order.get("amount"))
+                    .status(order.get("status"))
+                    .receipt(order.get("receipt"))
+                    .reservationId(request.getReservationId())
+                    .build();
+        } catch (Exception e) {
+            log.error("Error creating Razorpay order: ", e);
+            throw new PaymentException("Failed to create Razorpay order: " + e.getMessage());
+        }
     }
 
     @Override

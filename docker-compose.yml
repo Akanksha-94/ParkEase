@@ -1,0 +1,279 @@
+version: '3.8'
+
+services:
+  # =========================================================================
+  # 1. Database Infrastructure
+  # =========================================================================
+  parkease-mysql:
+    image: mysql:8.0
+    container_name: parkease-mysql
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: pallavi
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./docker-db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - parkease-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-ppallavi"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # =========================================================================
+  # 2. Discovery & Service Registration Core
+  # =========================================================================
+  discovery-server:
+    build:
+      context: ./discovery-server
+      dockerfile: Dockerfile
+    container_name: discovery-server
+    ports:
+      - "8761:8761"
+    environment:
+      PORT: 8761
+      EUREKA_HOSTNAME: discovery-server
+    networks:
+      - parkease-network
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8761/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # =========================================================================
+  # 3. API Routing Gateway
+  # =========================================================================
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    container_name: api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      GATEWAY_PORT: 8080
+      EUREKA_SERVER: http://discovery-server:8761/eureka/
+      JWT_SECRET: 4f6b6a6c6d6e6f707172737475767778797a3132333435363738393061626364
+      CORS_ALLOWED_ORIGINS: http://localhost:3000,http://localhost:4200,http://localhost:5173
+      SPRING_PROFILES_ACTIVE: dev
+    depends_on:
+      discovery-server:
+        condition: service_healthy
+    networks:
+      - parkease-network
+
+  # =========================================================================
+  # 4. Microservices Suite
+  # =========================================================================
+  auth-service:
+    build:
+      context: ./services/auth-service
+      dockerfile: Dockerfile
+    container_name: auth-service
+    ports:
+      - "8081:8081"
+    environment:
+      SERVER_PORT: 8081
+      SPRING_PROFILES_ACTIVE: dev
+      EUREKA_SERVER: http://discovery-server:8761/eureka/
+      EUREKA_HOSTNAME: auth-service
+      LOCAL_DB_URL: jdbc:mysql://parkease-mysql:3306/parkease_auth_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      LOCAL_DB_USERNAME: root
+      LOCAL_DB_PASSWORD: pallavi
+      LOCAL_JPA_SHOW_SQL: "false"
+      JWT_SECRET: 4f6b6a6c6d6e6f707172737475767778797a3132333435363738393061626364
+      JWT_EXPIRATION: 86400000
+    depends_on:
+      parkease-mysql:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+    networks:
+      - parkease-network
+
+  parking-lot-service:
+    build:
+      context: ./services/parking-lot-service
+      dockerfile: Dockerfile
+    container_name: parking-lot-service
+    ports:
+      - "8082:8082"
+    environment:
+      SERVER_PORT: 8082
+      SPRING_PROFILES_ACTIVE: dev
+      EUREKA_SERVER: http://discovery-server:8761/eureka/
+      EUREKA_HOSTNAME: parking-lot-service
+      LOCAL_DB_URL: jdbc:mysql://parkease-mysql:3306/parkease_parking_lot_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      LOCAL_DB_USERNAME: root
+      LOCAL_DB_PASSWORD: pallavi
+      LOCAL_JPA_SHOW_SQL: "false"
+    depends_on:
+      parkease-mysql:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+    networks:
+      - parkease-network
+
+  parking-spot-service:
+    build:
+      context: ./services/parking-spot-service
+      dockerfile: Dockerfile
+    container_name: parking-spot-service
+    ports:
+      - "8083:8083"
+    environment:
+      SERVER_PORT: 8083
+      SPRING_PROFILES_ACTIVE: dev
+      EUREKA_SERVER: http://discovery-server:8761/eureka/
+      EUREKA_HOSTNAME: parking-spot-service
+      LOCAL_DB_URL: jdbc:mysql://parkease-mysql:3306/parkease_parking_spot_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      LOCAL_DB_USERNAME: root
+      LOCAL_DB_PASSWORD: pallavi
+      LOCAL_JPA_SHOW_SQL: "false"
+    depends_on:
+      parkease-mysql:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+    networks:
+      - parkease-network
+
+  reservation-service:
+    build:
+      context: ./services/reservation-service
+      dockerfile: Dockerfile
+    container_name: reservation-service
+    ports:
+      - "8084:8084"
+    environment:
+      SERVER_PORT: 8084
+      SPRING_PROFILES_ACTIVE: dev
+      EUREKA_SERVER: http://discovery-server:8761/eureka/
+      EUREKA_HOSTNAME: reservation-service
+      LOCAL_DB_URL: jdbc:mysql://parkease-mysql:3306/parkease_reservation_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      LOCAL_DB_USERNAME: root
+      LOCAL_DB_PASSWORD: pallavi
+      LOCAL_JPA_SHOW_SQL: "false"
+      PARKEASE_SPOTS_SERVICE_URL: http://parking-spot-service:8083/spots
+      PARKEASE_LOTS_SERVICE_URL: http://parking-lot-service:8082/lots
+      INTERNAL_GATEWAY_SECRET: ParkEaseGateway2024
+    depends_on:
+      parkease-mysql:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+    networks:
+      - parkease-network
+
+  payment-service:
+    build:
+      context: ./services/payment-service
+      dockerfile: Dockerfile
+    container_name: payment-service
+    ports:
+      - "8085:8085"
+    environment:
+      SERVER_PORT: 8085
+      SPRING_PROFILES_ACTIVE: dev
+      EUREKA_SERVER: http://discovery-server:8761/eureka/
+      EUREKA_HOSTNAME: payment-service
+      LOCAL_DB_URL: jdbc:mysql://parkease-mysql:3306/parkease_payment_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      LOCAL_DB_USERNAME: root
+      LOCAL_DB_PASSWORD: pallavi
+      LOCAL_JPA_SHOW_SQL: "false"
+      RAZORPAY_KEY_ID: rzp_test_SqMnDDLhAHIihC
+      RAZORPAY_KEY_SECRET: 15pKNOZlF7QNUo4o0jVRtRXm
+    depends_on:
+      parkease-mysql:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+    networks:
+      - parkease-network
+
+  report-service:
+    build:
+      context: ./services/report-service
+      dockerfile: Dockerfile
+    container_name: report-service
+    ports:
+      - "8086:8086"
+    environment:
+      SERVER_PORT: 8086
+      SPRING_PROFILES_ACTIVE: dev
+      EUREKA_SERVER: http://discovery-server:8761/eureka/
+      EUREKA_HOSTNAME: report-service
+      LOCAL_DB_URL: jdbc:mysql://parkease-mysql:3306/parkease_report_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      LOCAL_DB_USERNAME: root
+      LOCAL_DB_PASSWORD: pallavi
+      LOCAL_JPA_SHOW_SQL: "false"
+    depends_on:
+      parkease-mysql:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+    networks:
+      - parkease-network
+
+  notification-service:
+    build:
+      context: ./services/notification-service
+      dockerfile: Dockerfile
+    container_name: notification-service
+    ports:
+      - "8087:8087"
+    environment:
+      SERVER_PORT: 8087
+      SPRING_PROFILES_ACTIVE: dev
+      EUREKA_SERVER: http://discovery-server:8761/eureka/
+      EUREKA_HOSTNAME: notification-service
+      LOCAL_DB_URL: jdbc:mysql://parkease-mysql:3306/parkease_notification_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      LOCAL_DB_USERNAME: root
+      LOCAL_DB_PASSWORD: pallavi
+      LOCAL_JPA_SHOW_SQL: "false"
+    depends_on:
+      parkease-mysql:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+    networks:
+      - parkease-network
+
+  vehicle-service:
+    build:
+      context: ./services/vehicle-service
+      dockerfile: Dockerfile
+    container_name: vehicle-service
+    ports:
+      - "8088:8088"
+    environment:
+      SERVER_PORT: 8088
+      SPRING_PROFILES_ACTIVE: dev
+      EUREKA_SERVER: http://discovery-server:8761/eureka/
+      EUREKA_HOSTNAME: vehicle-service
+      LOCAL_DB_URL: jdbc:mysql://parkease-mysql:3306/parkease_vehicle_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      LOCAL_DB_USERNAME: root
+      LOCAL_DB_PASSWORD: pallavi
+      LOCAL_JPA_SHOW_SQL: "false"
+    depends_on:
+      parkease-mysql:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+    networks:
+      - parkease-network
+
+# =========================================================================
+# Shared Network & Volume Definitions
+# =========================================================================
+networks:
+  parkease-network:
+    driver: bridge
+
+volumes:
+  mysql-data:
+    driver: local

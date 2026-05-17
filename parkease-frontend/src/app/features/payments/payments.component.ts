@@ -1,10 +1,13 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { PaymentService, Payment, PaymentMode } from '../../core/services/payment.service';
+import { PaymentService, Payment, PaymentMode, RazorpayOrderResponse } from '../../core/services/payment.service';
 import { ReservationService } from '../../core/services/reservation.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
+
+// Declare Razorpay as a global variable (loaded via index.html script tag)
+declare var Razorpay: any;
 
 @Component({
   selector: 'app-payments',
@@ -134,7 +137,7 @@ import { ToastService } from '../../core/services/toast.service';
         <button class="btn btn-primary w-full btn-lg"
           [disabled]="!selectedMode || paying()"
           (click)="confirmPayment()">
-          {{ paying() ? 'Processing...' : 'Confirm Payment' }}
+          {{ paying() ? 'Processing...' : '🔒 Pay Now via Razorpay' }}
         </button>
       </div>
     </div>
@@ -314,25 +317,65 @@ export class PaymentsComponent implements OnInit {
     const p = this.payModal();
     if (!p || !this.selectedMode) return;
     const userId = this.auth.currentUser?.userId ?? this.auth.currentUser?.id ?? 0;
+    const razorpayKeyId = 'rzp_test_SqMnDDLhAHIihC';
 
     this.paying.set(true);
-    this.paymentService.processPayment({
-      bookingId: p.bookingId,
-      userId: userId as number,
-      lotId: p.lotId ?? 0,
-      amount: p.amount,
-      mode: this.selectedMode,
-      currency: 'INR',
-      description: `Payment for Booking #${p.bookingId}`
-    }).subscribe({
-      next: () => {
-        this.toast.success('Payment processed successfully!');
-        this.payModal.set(null);
-        this.paying.set(false);
-        this.loadPayments();
+
+    // Step 1: Create Razorpay Order via our backend
+    this.paymentService.createRazorpayOrder(p.amount, p.bookingId).subscribe({
+      next: (order: RazorpayOrderResponse) => {
+        // Step 2: Open Razorpay Checkout Popup
+        const options = {
+          key: razorpayKeyId,
+          amount: order.amount,           // in paise (backend sends this)
+          currency: order.currency,
+          name: 'ParkEase',
+          description: `Payment for Booking #${p.bookingId}`,
+          order_id: order.orderId,
+          handler: (response: any) => {
+            // Step 3: On success, record in our DB
+            this.paymentService.processPayment({
+              bookingId: p.bookingId,
+              userId: userId as number,
+              lotId: p.lotId ?? 0,
+              amount: p.amount,
+              mode: this.selectedMode!,
+              currency: 'INR',
+              description: `Razorpay Payment | Order: ${order.orderId} | TxnID: ${response.razorpay_payment_id}`
+            }).subscribe({
+              next: () => {
+                this.toast.success('🎉 Payment Successful! Booking confirmed.');
+                this.payModal.set(null);
+                this.paying.set(false);
+                this.loadPayments();
+              },
+              error: () => {
+                // Payment went through Razorpay but DB update failed - still inform user
+                this.toast.success('Payment captured. Records will update shortly.');
+                this.payModal.set(null);
+                this.paying.set(false);
+                this.loadPayments();
+              }
+            });
+          },
+          prefill: {
+            name: this.auth.currentUser?.fullName || 'ParkEase Driver',
+            email: this.auth.currentUser?.email || '',
+          },
+          theme: { color: '#6366f1' },
+          modal: {
+            ondismiss: () => {
+              this.paying.set(false);
+              this.toast.error('Payment cancelled.');
+            }
+          }
+        };
+
+        const rzp = new Razorpay(options);
+        rzp.open();
       },
       error: (err) => {
-        this.toast.error(err.error?.message || 'Payment failed. Please try again.');
+        this.toast.error(err.error?.message || 'Failed to initialize payment. Please try again.');
         this.paying.set(false);
       }
     });

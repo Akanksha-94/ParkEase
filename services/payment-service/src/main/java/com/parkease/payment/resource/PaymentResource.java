@@ -40,6 +40,14 @@ public class PaymentResource {
                 .body(ApiResponse.success(201, "Payment processed successfully", paymentService.processPayment(request)));
     }
 
+    @PostMapping("/create-order")
+    public ResponseEntity<ApiResponse<com.parkease.payment.dto.response.PaymentOrderResponse>> createRazorpayOrder(
+            @Valid @RequestBody com.parkease.payment.dto.request.PaymentOrderRequest request) {
+        log.info("POST /payments/create-order - amount: {}", request.getAmount());
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success(201, "Order created successfully", paymentService.createRazorpayOrder(request)));
+    }
+
     @GetMapping("/booking/{bookingId}")
     public ResponseEntity<ApiResponse<PaymentResponse>> getByBooking(@PathVariable Long bookingId) {
         return ResponseEntity.ok(ApiResponse.success("Payment retrieved", paymentService.getByBooking(bookingId)));

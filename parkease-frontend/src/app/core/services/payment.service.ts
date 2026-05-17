@@ -22,6 +22,15 @@ export interface ProcessPaymentPayload {
   description?: string;
 }
 
+export interface RazorpayOrderResponse {
+  orderId: string;
+  currency: string;
+  amount: number;
+  status: string;
+  receipt: string;
+  reservationId: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class PaymentService {
   private api = inject(ApiService);
@@ -69,5 +78,15 @@ export class PaymentService {
   // GET /payments/{paymentId}/status
   getStatus(paymentId: number): Observable<string> {
     return this.api.get<string>(`payments/${paymentId}/status`);
+  }
+
+  // POST /payments/create-order (Razorpay)
+  createRazorpayOrder(amount: number, reservationId: number): Observable<RazorpayOrderResponse> {
+    return this.api.post<RazorpayOrderResponse>('payments/create-order', {
+      amount,
+      currency: 'INR',
+      receipt: `receipt_${reservationId}_${Date.now()}`,
+      reservationId
+    });
   }
 }

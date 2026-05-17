@@ -2,8 +2,12 @@ server:
   port: ${GATEWAY_PORT:8080}
 
 spring:
+  config:
+    import: "optional:file:.env[.properties],optional:file:api-gateway/.env[.properties]"
   application:
     name: api-gateway
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
   main:
     banner-mode: off
   cloud:
