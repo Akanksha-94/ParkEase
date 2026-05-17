@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
     <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
-    <property name="LOG_FILE" value="${LOG_PATH:-./logs}/${spring.application.name}.log" />
+    
+    <springProperty scope="context" name="appName" source="spring.application.name" defaultValue="payment-service"/>
+    <property name="LOG_FILE" value="${LOG_PATH:-./logs}/${appName}.log" />
 
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder><pattern>${CONSOLE_LOG_PATTERN}</pattern></encoder>

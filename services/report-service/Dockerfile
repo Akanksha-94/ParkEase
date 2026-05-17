@@ -20,10 +20,15 @@ WORKDIR /app
 
 # Create a non-privileged user and group for security hardening
 RUN addgroup -S parkease && adduser -S parkease -G parkease
-USER parkease
 
 # Copy only the compiled JAR from the builder stage
 COPY --from=builder /build/target/*.jar app.jar
+
+# Setup logs directory and establish secure directory ownership
+RUN mkdir -p /app/logs && chown -R parkease:parkease /app
+
+# Switch to the non-root runner
+USER parkease
 
 # Expose Service Port
 EXPOSE 8086
