@@ -8,7 +8,6 @@ import com.parkease.payment.model.PaymentStatus;
 import java.math.BigDecimal;
 import java.util.List;
 
-
 public interface PaymentService {
 
     PaymentResponse processPayment(ProcessPaymentRequest request);
