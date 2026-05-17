@@ -6,5 +6,6 @@ public enum NotificationType {
     EXPIRY,
     CHECKOUT,
     PAYMENT,
-    PROMO
+    PROMO,
+    SYSTEM   // Admin-generated alerts (e.g., sent to Managers)
 }

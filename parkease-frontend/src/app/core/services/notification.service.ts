@@ -9,6 +9,18 @@ export interface Notification {
   read: boolean;
   createdAt?: string;
   sentAt?: string;
+  relatedId?: number;
+  relatedType?: string;
+}
+
+export interface SendNotificationPayload {
+  recipientId: number;
+  type: 'BOOKING' | 'CHECKIN' | 'CHECKOUT' | 'EXPIRY' | 'PAYMENT' | 'PROMO' | 'SYSTEM';
+  title: string;
+  message: string;
+  channel: 'APP' | 'EMAIL' | 'SMS';
+  relatedId?: number;
+  relatedType?: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -19,6 +31,8 @@ export class NotificationService {
   private get userId(): number {
     return (this.auth.currentUser?.userId ?? this.auth.currentUser?.id) as number;
   }
+
+  // ─── Read & Manage ────────────────────────────────────────────────────────
 
   // GET /notifications/recipient/{recipientId}
   getMyNotifications(): Observable<Notification[]> {
@@ -43,5 +57,45 @@ export class NotificationService {
   // DELETE /notifications/{notificationId}
   delete(id: number): Observable<void> {
     return this.api.delete<void>(`notifications/${id}`);
+  }
+
+  // ─── Admin: Send Notifications ────────────────────────────────────────────
+
+  /**
+   * Send a single notification to a specific user.
+   * POST /notifications
+   */
+  sendNotification(payload: SendNotificationPayload): Observable<Notification> {
+    return this.api.post<Notification>('notifications', payload);
+  }
+
+  /**
+   * Send the same message to multiple recipients at once.
+   * POST /notifications/bulk
+   */
+  sendBulkNotifications(payloads: SendNotificationPayload[]): Observable<void> {
+    return this.api.post<void>('notifications/bulk', payloads);
+  }
+
+  /**
+   * Convenience: send an SYSTEM alert from Admin to a specific manager (by userId).
+   */
+  sendAlertToManager(
+    managerId: number,
+    title: string,
+    message: string,
+    channel: 'APP' | 'EMAIL' | 'SMS' = 'APP'
+  ): Observable<Notification> {
+    const senderId = this.auth.currentUser?.userId ?? this.auth.currentUser?.id;
+    const senderRole = this.auth.currentUser?.role;
+    return this.sendNotification({
+      recipientId: managerId,
+      type: 'SYSTEM',
+      title,
+      message,
+      channel,
+      relatedId: senderId ? Number(senderId) : undefined,
+      relatedType: senderRole || undefined
+    });
   }
 }

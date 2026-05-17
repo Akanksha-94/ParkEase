@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject, signal, DestroyRef } from '@angular/core';
+import { Component, OnInit, inject, signal, computed, DestroyRef } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { RouterLink } from '@angular/router';
@@ -11,11 +11,14 @@ import { ReservationService, Reservation } from '../../core/services/reservation
 import { AuthService } from '../../core/services/auth.service';
 import { VehicleService } from '../../core/services/vehicle.service';
 import { ParkingLotService, ParkingLot } from '../../core/services/parking-lot.service';
+import { NotificationService, Notification } from '../../core/services/notification.service';
+import { ToastService } from '../../core/services/toast.service';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, FormsModule],
   template: `
     <div class="zenith-container animate-in">
       <header class="zenith-header">
@@ -106,6 +109,41 @@ import { ParkingLotService, ParkingLot } from '../../core/services/parking-lot.s
             <svg class="trend-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M17 7H9M17 7V15"/></svg>
           </div>
           <div class="pulse-value-new">{{ stats()[3].value }}</div>
+        </section>
+
+        <!-- Administrative Directives / Communications Card (2x1) -->
+        <section class="bento-card wide glass directives-tile">
+          <div class="tile-header">
+            <div class="header-title">
+              <span class="tile-label">Command Communications</span>
+              <span class="alert-pulse-amber" *ngIf="unreadDirectivesCount() > 0"></span>
+            </div>
+            <button class="text-btn" (click)="markAllDirectivesRead()" *ngIf="unreadDirectivesCount() > 0">Acknowledge All</button>
+          </div>
+          
+          <div class="directives-feed">
+            <div class="directive-item animate-in" *ngFor="let dir of directives()" [class.unread]="!dir.read">
+              <div class="directive-content">
+                <div class="directive-meta">
+                  <span class="channel-badge" data-channel="SYSTEM">SYSTEM</span>
+                  <span class="time">{{ dir.sentAt | date:'MMM d, HH:mm' }}</span>
+                </div>
+                <h4 class="directive-title">{{ dir.title }}</h4>
+                <p class="directive-message">{{ dir.message }}</p>
+              </div>
+              <div class="directive-actions" *ngIf="dir.relatedId">
+                <button class="reply-btn" (click)="openReplyModal(dir)" title="Reply to Sender">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                  Reply
+                </button>
+              </div>
+            </div>
+            
+            <div *ngIf="directives().length === 0" class="empty-list">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/></svg>
+              No active directives or responses logged.
+            </div>
+          </div>
         </section>
 
         <!-- Recent Activity Feed (2x1) -->
@@ -334,6 +372,59 @@ import { ParkingLotService, ParkingLot } from '../../core/services/parking-lot.s
             </div>
           </div>
         </section>
+      </div>
+
+      <!-- Glassmorphism Reply Modal -->
+      <div class="zenith-modal-backdrop" *ngIf="showReplyModal" (click)="closeReplyModal()">
+        <div class="zenith-modal-card" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <div>
+              <h2>Reply Directive</h2>
+              <p>Send a direct response to Admin</p>
+            </div>
+            <button class="close-btn" (click)="closeReplyModal()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+          
+          <form (ngSubmit)="sendReply()" #replyFormRef="ngForm">
+            <!-- Target User -->
+            <div class="field-group">
+              <label>Recipient</label>
+              <div class="recipient-badge">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+                <span>Administrator (ID: {{ activeDirective()?.relatedId }})</span>
+              </div>
+            </div>
+
+            <!-- Subject -->
+            <div class="field-group">
+              <label>Subject</label>
+              <input type="text" class="reply-input-disabled" [value]="replyForm.title" disabled />
+            </div>
+
+            <!-- Message -->
+            <div class="field-group">
+              <label for="replyMessage">Message</label>
+              <textarea
+                id="replyMessage"
+                name="message"
+                [(ngModel)]="replyForm.message"
+                required
+                rows="4"
+                placeholder="Enter your response message..."
+              ></textarea>
+            </div>
+
+            <div class="modal-footer">
+              <button type="button" class="zenith-btn secondary" (click)="closeReplyModal()">Cancel</button>
+              <button type="submit" class="zenith-btn primary" [disabled]="!replyFormRef.valid || sendingReply()">
+                <span *ngIf="!sendingReply()">⚡ Send Reply</span>
+                <span *ngIf="sendingReply()" class="loader"></span>
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   `,
@@ -659,9 +750,155 @@ import { ParkingLotService, ParkingLot } from '../../core/services/parking-lot.s
 
     .telemetry-count { font-size: 10px; font-weight: 900; color: var(--primary-color); background: oklch(var(--primary) / 10%); padding: 4px 10px; border-radius: 100px; }
 
+    /* Directives Bento Card & Feed */
+    .directives-tile {
+      background: var(--bg-card) !important;
+      border: 1px solid var(--border-color) !important;
+      backdrop-filter: blur(20px);
+      display: flex; flex-direction: column; justify-content: flex-start;
+      
+      .alert-pulse-amber {
+        width: 8px; height: 8px; background: #f59e0b; border-radius: 50%;
+        display: inline-block; box-shadow: 0 0 0 rgba(245, 158, 11, 0.4);
+        animation: amber-pulse 2s infinite;
+      }
+    }
+    
+    @keyframes amber-pulse {
+      0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
+      70% { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+    }
+
+    .directives-feed {
+      display: flex; flex-direction: column; gap: 12px;
+      max-height: 250px; overflow-y: auto; padding-right: 4px;
+      margin-top: 8px;
+    }
+
+    .directive-item {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      padding: 16px; background: oklch(var(--foreground) / 3%);
+      border-radius: 20px; border: 1px solid var(--border-color);
+      transition: 0.3s;
+      
+      &.unread {
+        background: oklch(var(--foreground) / 6%);
+        border-color: oklch(65% 0.22 27 / 20%);
+      }
+      
+      &:hover {
+        transform: translateY(-2px);
+        border-color: var(--primary-color);
+      }
+      
+      .directive-content {
+        flex: 1; display: flex; flex-direction: column; gap: 4px;
+        
+        .directive-meta {
+          display: flex; align-items: center; gap: 8px;
+          .channel-badge {
+            font-size: 9px; font-weight: 800; padding: 2px 8px; border-radius: 4px;
+            background: oklch(var(--foreground) / 5%); color: var(--text-secondary);
+            &[data-channel="EMAIL"] { background: rgba(99, 102, 241, 0.1); color: #6366f1; }
+            &[data-channel="SMS"] { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+          }
+          .time { font-size: 10px; color: var(--text-muted); font-weight: 600; }
+        }
+        
+        .directive-title { font-size: 14px; font-weight: 800; margin: 4px 0 2px; color: var(--text-primary); text-align: left; }
+        .directive-message { font-size: 13px; color: var(--text-muted); margin: 0; line-height: 1.4; text-align: left; }
+      }
+      
+      .directive-actions {
+        margin-left: 16px; align-self: center;
+      }
+    }
+
+    .reply-btn {
+      display: flex; align-items: center; gap: 6px;
+      padding: 8px 14px; border-radius: 12px; border: 1px solid var(--border-color);
+      background: var(--bg-card); color: var(--text-primary);
+      font-size: 11px; font-weight: 700; cursor: pointer; transition: 0.2s;
+      svg { width: 14px; height: 14px; color: var(--text-muted); }
+      &:hover {
+        background: var(--primary-color); color: white; border-color: var(--primary-color);
+        svg { color: white; }
+      }
+    }
+
+    /* Modal Backdrop */
+    .zenith-modal-backdrop {
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(0,0,0,0.6); backdrop-filter: blur(16px);
+      display: flex; align-items: center; justify-content: center; z-index: 1000;
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    .zenith-modal-card {
+      width: 100%; max-width: 480px; padding: 32px; border-radius: 28px;
+      background: var(--bg-card); border: 1px solid var(--border-color);
+      box-shadow: 0 30px 70px rgba(0,0,0,0.4);
+      animation: slideUp 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+      
+      .modal-header {
+        display: flex; align-items: center; margin-bottom: 24px; position: relative;
+        text-align: left;
+        h2 { font-size: 20px; font-weight: 800; color: var(--text-primary); margin: 0 0 4px; }
+        p  { font-size: 13px; color: var(--text-muted); margin: 0; }
+        .close-btn {
+          margin-left: auto; width: 36px; height: 36px; border-radius: 50%;
+          background: oklch(var(--foreground)/5%); border: 1px solid var(--border-color);
+          display: flex; align-items: center; justify-content: center;
+          cursor: pointer; transition: 0.2s;
+          svg { width: 16px; height: 16px; color: var(--text-muted); }
+          &:hover { background: oklch(var(--foreground)/10%); }
+        }
+      }
+      
+      .field-group {
+        margin-bottom: 20px; text-align: left;
+        label {
+          display: block; font-size: 12px; font-weight: 700;
+          color: var(--text-primary); margin-bottom: 8px;
+          text-transform: uppercase; letter-spacing: 0.05em;
+        }
+        textarea {
+          width: 100%; padding: 13px 14px; resize: vertical;
+          background: oklch(var(--foreground)/4%); border: 1px solid var(--border-color);
+          border-radius: 12px; color: var(--text-primary); font-size: 14px;
+          font-family: inherit; transition: var(--trans);
+          &::placeholder { color: oklch(var(--foreground)/25%); }
+          &:focus { outline: none; border-color: oklch(65% 0.22 27); background: oklch(var(--foreground)/6%); }
+        }
+      }
+
+      .modal-footer {
+        display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;
+      }
+    }
+
+    .recipient-badge {
+      display: flex; align-items: center; gap: 8px; padding: 10px 14px;
+      background: oklch(var(--foreground) / 4%); border-radius: 12px;
+      border: 1px solid var(--border-color); font-size: 13px; font-weight: 600;
+      color: var(--text-secondary);
+      svg { width: 16px; height: 16px; color: var(--primary-color); }
+    }
+
+    .reply-input-disabled {
+      width: 100%; padding: 13px 14px; background: oklch(var(--foreground)/3%);
+      border: 1px solid var(--border-color); border-radius: 12px;
+      color: var(--text-muted); font-size: 14px; font-weight: 600;
+    }
+
+    .loader { width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
   `]
 })
 export class DashboardComponent implements OnInit {
+  private notifService = inject(NotificationService);
+  private toast = inject(ToastService);
   private auth = inject(AuthService);
   private analyticsService = inject(AnalyticsService);
   private resService = inject(ReservationService);
@@ -672,6 +909,18 @@ export class DashboardComponent implements OnInit {
 
   user = signal(this.auth.currentUser);
   currentTime = new Date();
+
+  directives = signal<Notification[]>([]);
+  unreadDirectivesCount = computed(() => this.directives().filter(d => !d.read).length);
+
+  showReplyModal = false;
+  sendingReply = signal(false);
+  activeDirective = signal<Notification | null>(null);
+
+  replyForm = {
+    title: '',
+    message: ''
+  };
   
   get isManagerOrAdmin(): boolean {
     const role = this.auth.role;
@@ -702,12 +951,20 @@ export class DashboardComponent implements OnInit {
 
   ngOnInit() {
     this.loadData();
+    if (this.isManagerOrAdmin) {
+      this.loadDirectives();
+    }
     setInterval(() => this.currentTime = new Date(), 1000);
 
     // Polling for real-time updates every 10 seconds
     interval(10000)
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => this.loadData());
+      .subscribe(() => {
+        this.loadData();
+        if (this.isManagerOrAdmin) {
+          this.loadDirectives();
+        }
+      });
   }
 
   circularOffset(): number {
@@ -901,5 +1158,81 @@ export class DashboardComponent implements OnInit {
   getLotOccupancyRate(lot: ParkingLot): number {
     if (!lot.totalSpots) return 0;
     return Math.round(((lot.totalSpots - lot.availableSpots) / lot.totalSpots) * 100);
+  }
+
+  loadDirectives() {
+    this.notifService.getMyNotifications().subscribe({
+      next: (list) => {
+        // Filter only SYSTEM notifications (directives/alerts)
+        const sysList = (list || []).filter(n => n.type === 'SYSTEM');
+        // Sort: newest first
+        sysList.sort((a, b) => {
+          const tA = a.sentAt ? new Date(a.sentAt).getTime() : 0;
+          const tB = b.sentAt ? new Date(b.sentAt).getTime() : 0;
+          return tB - tA;
+        });
+        this.directives.set(sysList);
+      }
+    });
+  }
+
+  markAllDirectivesRead() {
+    this.notifService.markAllRead().subscribe({
+      next: () => {
+        this.directives.update(list => list.map(d => ({ ...d, read: true })));
+        this.toast.success('All directives acknowledged.');
+      }
+    });
+  }
+
+  openReplyModal(dir: Notification) {
+    this.activeDirective.set(dir);
+    this.replyForm = {
+      title: `Reply to: ${dir.title}`,
+      message: ''
+    };
+    this.showReplyModal = true;
+  }
+
+  closeReplyModal() {
+    this.showReplyModal = false;
+    this.activeDirective.set(null);
+  }
+
+  sendReply() {
+    const dir = this.activeDirective();
+    if (!dir || !dir.relatedId || !this.replyForm.message) return;
+    this.sendingReply.set(true);
+
+    this.notifService.sendNotification({
+      recipientId: dir.relatedId,
+      type: 'SYSTEM',
+      title: this.replyForm.title,
+      message: this.replyForm.message,
+      channel: 'APP',
+      relatedId: this.auth.currentUser?.userId ?? this.auth.currentUser?.id,
+      relatedType: this.auth.currentUser?.role
+    }).subscribe({
+      next: () => {
+        this.sendingReply.set(false);
+        this.showReplyModal = false;
+        this.toast.success('Reply directive transmitted successfully!');
+
+        // Auto-mark original directive as read
+        if (!dir.read) {
+          this.notifService.markAsRead(dir.notificationId).subscribe({
+            next: () => {
+              this.directives.update(list =>
+                list.map(d => d.notificationId === dir.notificationId ? { ...d, read: true } : d)
+              );
+            }
+          });
+        }
+      },
+      error: (err) => {
+        this.sendingReply.set(false);
+        this.toast.error(err?.error?.message || 'Failed to transmit reply.');
+      }
+    });
   }
 }

@@ -4,6 +4,8 @@ import com.parkease.auth.dto.request.*;
 import com.parkease.auth.dto.response.AuthResponse;
 import com.parkease.auth.dto.response.UserResponse;
 
+import java.util.List;
+
 
 
 /**
@@ -31,6 +33,8 @@ public interface AuthService {
     UserResponse getProfile(Long userId);
 
     UserResponse updateProfile(Long userId, UpdateProfileRequest request);
+
+    List<UserResponse> getUsersByRole(String role);
 
     // ── Security ──────────────────────────────────
     void changePassword(Long userId, ChangePasswordRequest request);

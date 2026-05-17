@@ -62,6 +62,10 @@ export class AuthService {
     return this.http.get<ApiResponse<AuthUser>>(`${this.BASE}/profile`);
   }
 
+  getUsersByRole(role: string): Observable<ApiResponse<AuthUser[]>> {
+    return this.http.get<ApiResponse<AuthUser[]>>(`${this.BASE}/role/${role}`);
+  }
+
   updateProfile(payload: { fullName?: string; email?: string; phone?: string }): Observable<ApiResponse<AuthUser>> {
     return this.http.put<ApiResponse<AuthUser>>(`${this.BASE}/profile`, payload).pipe(
       tap(res => { if (res.data) this.updateUser(res.data); })

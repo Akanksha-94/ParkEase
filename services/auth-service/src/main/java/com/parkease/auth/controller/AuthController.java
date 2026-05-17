@@ -12,6 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -130,5 +131,13 @@ public class AuthController {
         UserResponse existing = authService.getUserByEmail(username);
         authService.deactivateAccount(existing.getUserId());
         return ResponseEntity.ok(ApiResponse.success("Account deactivated successfully", null));
+    }
+
+    @GetMapping("/role/{role}")
+    public ResponseEntity<ApiResponse<List<UserResponse>>> getUsersByRole(
+            @PathVariable String role) {
+        log.info("GET /auth/role/{}", role);
+        return ResponseEntity.ok(
+                ApiResponse.success("Users retrieved by role successfully", authService.getUsersByRole(role)));
     }
 }

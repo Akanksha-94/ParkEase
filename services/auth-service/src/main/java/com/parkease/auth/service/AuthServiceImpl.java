@@ -17,8 +17,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 
 @Service
@@ -187,6 +189,17 @@ public class AuthServiceImpl implements AuthService {
         User updatedUser = userRepository.save(user);
         log.info("Profile updated for userId: {}", userId);
         return mapToUserResponse(updatedUser);
+    }
+
+    @Override
+    public List<UserResponse> getUsersByRole(String role) {
+        Role parsedRole = parseRole(role);
+        log.info("Fetching all active users with role: {}", parsedRole);
+        return userRepository.findAllByRole(parsedRole)
+                .stream()
+                .filter(User::isActive)
+                .map(this::mapToUserResponse)
+                .collect(Collectors.toList());
     }
 
     @Override
